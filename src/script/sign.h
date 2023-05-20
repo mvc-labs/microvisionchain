@@ -1,0 +1,111 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2022 The Bitcoin Core developers
+// Copyright (c) 2021-2023 The MVC developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef MVC_SCRIPT_SIGN_H
+#define MVC_SCRIPT_SIGN_H
+
+#include "script/interpreter.h"
+#include "script/sighashtype.h"
+
+class CKeyID;
+class CKeyStore;
+class CMutableTransaction;
+class CScript;
+class CTransaction;
+
+/** Virtual base class for signature creators. */
+class BaseSignatureCreator {
+protected:
+    const CKeyStore *keystore;
+
+public:
+    BaseSignatureCreator(const CKeyStore *keystoreIn) : keystore(keystoreIn) {}
+    const CKeyStore &KeyStore() const { return *keystore; };
+    virtual ~BaseSignatureCreator() {}
+    virtual const BaseSignatureChecker &Checker() const = 0;
+
+    /** Create a singular (non-script) signature. */
+    virtual bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID &keyid,
+                           const CScript &scriptCode) const = 0;
+};
+
+/** A signature creator for transactions. */
+class TransactionSignatureCreator : public BaseSignatureCreator {
+    const CTransaction *txTo;
+    unsigned int nIn;
+    Amount amount;
+    SigHashType sigHashType;
+    const TransactionSignatureChecker checker;
+
+public:
+    TransactionSignatureCreator(const CKeyStore *keystoreIn,
+                                const CTransaction *txToIn, unsigned int nInIn,
+                                const Amount amountIn,
+                                SigHashType sigHashTypeIn = SigHashType());
+    const BaseSignatureChecker &Checker() const override { return checker; }
+    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID &keyid,
+                   const CScript &scriptCode) const override;
+};
+
+class MutableTransactionSignatureCreator : public TransactionSignatureCreator {
+    CTransaction tx;
+
+public:
+    MutableTransactionSignatureCreator(const CKeyStore *keystoreIn,
+                                       const CMutableTransaction *txToIn,
+                                       unsigned int nInIn, const Amount amount,
+                                       SigHashType sigHashTypeIn)
+        : TransactionSignatureCreator(keystoreIn, &tx, nInIn, amount,
+                                      sigHashTypeIn),
+          tx(*txToIn) {}
+};
+
+/** A signature creator that just produces 72-byte empty signatures. */
+class DummySignatureCreator : public BaseSignatureCreator {
+public:
+    DummySignatureCreator(const CKeyStore *keystoreIn)
+        : BaseSignatureCreator(keystoreIn) {}
+    const BaseSignatureChecker &Checker() const override;
+    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID &keyid,
+                   const CScript &scriptCode) const override;
+};
+
+struct SignatureData {
+    CScript scriptSig;
+
+    SignatureData() {}
+    explicit SignatureData(const CScript &script) : scriptSig(script) {}
+};
+
+/** Produce a script signature using a generic signature creator. */
+bool ProduceSignature(const Config& config, bool consensus, const BaseSignatureCreator& creator, bool genesisEnabled, bool utxoAfterGenesis,
+                      const CScript& scriptPubKey, SignatureData& sigdata);
+
+/** Produce a script signature for a transaction. */
+bool SignSignature(const Config& config, const CKeyStore& keystore, bool genesisEnabled,
+                   bool utxoAfterGenesis, const CScript& fromPubKey,
+                   CMutableTransaction& txTo, unsigned int nIn,
+                   const Amount amount, SigHashType sigHashType);
+bool SignSignature(const Config& config, const CKeyStore& keystore, bool genesisEnabled,
+                   bool utxoAfterGenesis, const CTransaction& txFrom,
+                   CMutableTransaction& txTo, unsigned int nIn,
+                   SigHashType sigHashType);
+
+/** Combine two script signatures using a generic signature checker,
+ * intelligently, possibly with OP_0 placeholders. */
+SignatureData CombineSignatures(const Config& config, bool consensus, const CScript &scriptPubKey,
+                                const BaseSignatureChecker &checker,
+                                const SignatureData &scriptSig1,
+                                const SignatureData &scriptSig2,
+                                bool utxoAfterGenesis);
+
+/** Extract signature data from a transaction, and insert it. */
+SignatureData DataFromTransaction(const CMutableTransaction &tx,
+                                  unsigned int nIn);
+void UpdateTransaction(CMutableTransaction &tx, unsigned int nIn,
+                       const SignatureData &data);
+
+#endif // MVC_SCRIPT_SIGN_H

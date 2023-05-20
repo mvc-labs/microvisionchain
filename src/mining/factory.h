@@ -1,0 +1,57 @@
+// Copyright (c) 2021-2023 The MVC developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#pragma once
+
+#include <enum_cast.h>
+#include <mining/candidates.h>
+#include <mining/assembler.h>
+
+#include <memory>
+
+class Config;
+
+namespace mining
+{
+
+class CMiningFactory
+{
+  public:
+
+    CMiningFactory(const Config& config);
+
+    // The types of supported block assembler
+    enum class BlockAssemblerType
+    {
+        UNKNOWN,
+        LEGACY,
+        JOURNALING
+    };
+
+    // Get an appropriate block assembler
+    BlockAssemblerRef GetAssembler() const;
+
+    // Get a reference to the mining candidate manager
+    static CMiningCandidateManager& GetCandidateManager();
+
+  private:
+
+    // Keep reference to the global config
+    const Config& mConfig;
+
+    // A single journaling block assember; only created if configured appropriately.
+    BlockAssemblerRef   mJournalingAssembler {nullptr};
+
+};
+
+// Enable enum_cast for BlockAssemblerType
+const enumTableT<CMiningFactory::BlockAssemblerType>& enumTable(CMiningFactory::BlockAssemblerType);
+
+// Default block assembler type to use
+constexpr CMiningFactory::BlockAssemblerType DEFAULT_BLOCK_ASSEMBLER_TYPE { CMiningFactory::BlockAssemblerType::JOURNALING };
+
+// A global unique mining factory
+inline std::unique_ptr<CMiningFactory> g_miningFactory {nullptr};
+
+}
