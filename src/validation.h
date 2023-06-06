@@ -621,6 +621,9 @@ void PruneBlockFilesManual(int32_t nPruneUpToHeight);
 /** Check if DAA HF has activated. */
 bool IsDAAEnabled(const Config &config, int32_t nHeight);
 
+bool IsASERTEnabled(const Config &config,
+                    const CBlockIndex *pindexPrev);
+
 /** Check if Genesis has activated. */
 bool IsGenesisEnabled(const Config &config, const CBlockIndex *pindexPrev);
 /** Check if Genesis has activated.

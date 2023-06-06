@@ -649,6 +649,23 @@ bool IsDAAEnabled(const Config &config, int32_t nHeight) {
     return nHeight >= config.GetChainParams().GetConsensus().daaHeight;
 }
 
+bool IsASERTEnabled(const Config &config,
+                    const CBlockIndex *pindexPrev) {
+    if (pindexPrev == nullptr) {
+        return false;
+    }
+
+    const Consensus::Params &params = config.GetChainParams().GetConsensus();
+
+    if (params.asertAnchorParams) {
+        // This chain has a checkpointed anchor block, do simple height check
+        return pindexPrev->GetHeight() >= params.asertAnchorParams->nHeight;
+    }
+    
+    // Otherwise, do the MTP check
+    return pindexPrev->GetMedianTimePast() >= params.asertActivationTime;
+}
+
 bool IsGenesisEnabled(const Config &config, int32_t nHeight) {
     if (nHeight == MEMPOOL_HEIGHT) {
         throw std::runtime_error("A coin with height == MEMPOOL_HEIGHT was passed "
@@ -6376,6 +6393,7 @@ void UnloadBlockIndex() {
     setBlockIndexCandidates.clear();
     chainActive.SetTip(nullptr);
     pindexBestInvalid = nullptr;
+    ResetASERTAnchorBlockCache();
     // FIXME: CORE-1253, CORE-1232
     // Assumption: This is called only at startup before mempool.dat is restored.
     // This is a quick fix for CORE-1253 to prevent wiping mempoolTxDB at
