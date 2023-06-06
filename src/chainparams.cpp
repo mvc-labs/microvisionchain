@@ -99,15 +99,21 @@ public:
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60;
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = false;
         // 95% of 2016
         consensus.nRuleChangeActivationThreshold = 1916;
         // nPowTargetTimespan / nPowTargetSpacing
         consensus.nMinerConfirmationWindow = 2016;
 
+        // The half life for the ASERT DAA. For every (nASERTHalfLife) seconds behind schedule the blockchain gets,
+        // difficulty is cut in half. Doubled if blocks are ahead of schedule.
+        // Two days
+        consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
+        // June 13, 2023 hard fork
+        consensus.asertActivationTime = 1686636000;
+
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S(
-            "000000000000000000000000000000000000000000011df1e75895de994146f2");
+            "000000000000000000000000000000000000000000021e0be558cbec88f59787");
 
         // By default assume that the signatures in ancestors of this block are
         // valid.
@@ -150,7 +156,7 @@ public:
         // Note that of those with the service bits flag, most only support a
         // subset of possible options.
         // MicroVisionChain seeder
-        vSeeds.push_back(CDNSSeedData("", "seed.heshuchao.com", true));
+        vSeeds.push_back(CDNSSeedData("", "", true));
        
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<uint8_t>(1, 0);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<uint8_t>(1, 5);
@@ -167,7 +173,7 @@ public:
         fMineBlocksOnDemand = true;
 
         checkpointData = { {
-                {0       , uint256S("000000000000000001d956714215d96ffc00e0afda4cd0a96c96f8d802b1662b")},
+                {0       ,uint256S("000000000000000001d956714215d96ffc00e0afda4cd0a96c96f8d802b1662b")},
                 {10      ,uint256S("000000005ed7fcdbc7b1e02b2cade8aa5a6800d5c8266f935b2c0f26e420fb1b")},
                 {100     ,uint256S("0000000000000efeb84247cba43f34a88587113ef2382f1cc97a067ec91032e9")},
                 {1000    ,uint256S("000000000000040c71f55cc180ae44c9fe54c21b5b69ace211275ed55ba52c33")},
@@ -180,6 +186,8 @@ public:
                 {8000    ,uint256S("00000000000000001573688db762f2e03cfe9bc7c6da8496c3f14743166d303a")},
                 {9000    ,uint256S("00000000000000001a40b48f48bf7bef5c3fc7d4e6cb853a43769a4333e6b175")},
                 {10000   ,uint256S("0000000000000000267cebf54e6744ea0ca3810dc9ac9a45f9bf2af9d1cc202e")},
+                {15000   ,uint256S("00000000000000001e42eaa37721614e3ccabca5060f3bcbb195021057564924")},
+                {20000   ,uint256S("00000000000000000d72037cdd71687274a92e868ca934349d5b3933c604d97e")},
             }};
 
         // Data as of block
@@ -228,11 +236,16 @@ public:
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60;
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = false;
         // 75% for testchains
         consensus.nRuleChangeActivationThreshold = 1916;
         // nPowTargetTimespan / nPowTargetSpacing
         consensus.nMinerConfirmationWindow = 2016;
+
+        // The half life for the ASERT DAA. For every (nASERTHalfLife) seconds behind schedule the blockchain gets,
+        // difficulty is cut in half. Doubled if blocks are ahead of schedule.
+        // Two days
+        consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
+        consensus.asertActivationTime = 1685426400;
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S(

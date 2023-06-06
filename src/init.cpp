@@ -2458,8 +2458,22 @@ bool AppInitParameterInteraction(ConfigInit &config) {
     nConnectTimeout = gArgs.GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0) nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
+    // Fee-per-kilobyte amount considered the same as "free". If you are mining,
+    // be careful setting this: if you set it to zero then a transaction spammer
+    // can cheaply fill blocks using 1-satoshi-fee transactions. It should be
+    // set above the real cost to you of processing a transaction.
+    if (gArgs.IsArgSet("-minrelaytxfee")) {
+        Amount n(0);
+        auto parsed = ParseMoney(gArgs.GetArg("-minrelaytxfee", ""), n);
+        if (!parsed || Amount(0) == n)
+            return InitError(AmountErrMsg("minrelaytxfee",
+                                        gArgs.GetArg("-minrelaytxfee", "")));
+        // High fee check is done afterward in CWallet::ParameterInteraction()
+        config.SetMinFeePerKB(CFeeRate(n));
+    } else {
+        config.SetMinFeePerKB(CFeeRate(DEFAULT_MIN_RELAY_TX_FEE));
+    }
 
-    config.SetMinFeePerKB(CFeeRate(Amount(0)));
     config.SetDustLimitFactor(DEFAULT_DUST_LIMIT_FACTOR);
 
     // Sanity check argument for min fee for including tx in block

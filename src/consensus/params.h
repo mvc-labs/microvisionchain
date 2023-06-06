@@ -40,7 +40,6 @@ struct Params {
     /** Proof of work parameters */
     uint256 powLimit;
     bool fPowAllowMinDifficultyBlocks;
-    bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
     int64_t DifficultyAdjustmentInterval() const {
@@ -48,6 +47,18 @@ struct Params {
     }
     uint256 nMinimumChainWork;
     uint256 defaultAssumeValid;
+
+
+    int asertActivationTime;
+
+    int64_t nASERTHalfLife;
+    
+    struct ASERTAnchor {
+        int nHeight;
+        uint32_t nBits;
+        int64_t nPrevBlockTime;
+   };
+   std::optional<ASERTAnchor> asertAnchorParams;
 };
 } // namespace Consensus
 
