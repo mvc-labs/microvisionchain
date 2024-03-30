@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -110,11 +110,11 @@ CScript COINBASE_FLAGS;
 
 const std::string strMessageMagic = "MVC Signed Message:\n";
 
-uint64_t firstBlockReward = 5000000000;
-uint64_t initialReward = 5000000000;
-int subsidyHalvingInterval = 210000;
-std::string firstBlockGenesisLockScript = "";
-int genesisLockHeight = 0;
+uint64_t firstBlockReward;
+uint64_t initialReward;
+int subsidyHalvingInterval;
+std::string firstBlockGenesisLockScript;
+int genesisLockHeight;
 
 // Internal stuff
 namespace {
@@ -2264,7 +2264,11 @@ bool IsInitialBlockDownload() {
     {
         return true;
     }
-    if ((tip->GetBlockTime() != 0x5BEDB819) && (tip->GetBlockTime() < (GetTime() - nMaxTipAge))) {
+    if (
+#if CHAIN_GENERATION_WITH_HARDCODED_GENESIS
+        (tip->GetBlockTime() != 0x5BEDB819) && 
+#endif
+     (tip->GetBlockTime() < (GetTime() - nMaxTipAge))) {
         return true;
     }
     LogPrintf("Leaving InitialBlockDownload (latching to false)\n");
@@ -2929,8 +2933,9 @@ public:
         // block hash at that height doesn't correspond.
         fEnforceBIP30 =
             fEnforceBIP30 &&
-            (!pindexBIP34height ||
-             !(pindexBIP34height->GetBlockHash() == consensusParams.BitcoinSoftForksHash));
+            !pindexBIP34height;
+            // (!pindexBIP34height ||
+            //  !(pindexBIP34height->GetBlockHash() == consensusParams.BitcoinSoftForksHash));
 
         if(config.GetDisableBIP30Checks())
         {
@@ -3284,6 +3289,17 @@ private:
 
         Amount blockReward =
             nFees + GetBlockSubsidy(pindex->GetHeight(), consensusParams);
+        if (pindex->GetHeight() == 1 && block.vtx[0]->GetValueOut() != blockReward) {
+            auto result = state.DoS(100, error("ConnectBlock(): first block coinbase pays mismatch "
+                                               "(actual=%d vs expect=%d)",
+                                               block.vtx[0]->GetValueOut(), blockReward),
+                                    REJECT_INVALID, "bad-cb-amount");
+            if(!state.IsValid() && g_connman)
+            {
+                g_connman->getInvalidTxnPublisher().Publish( { block.vtx[0], pindex, state } );
+            }
+            return result;
+        }
         if (block.vtx[0]->GetValueOut() > blockReward) {
             auto result = state.DoS(100, error("ConnectBlock(): coinbase pays too much "
                                                "(actual=%d vs limit=%d)",
@@ -5437,8 +5453,8 @@ bool AcceptBlockHeader(const Config& config,
                 *ppindex = pindex;
             }
             if (pindex->getStatus().isInvalid()) {
-                return state.Invalid(error("%s: block %s is marked invalid",
-                                           __func__, hash.ToString()),
+                return state.Invalid(error("%s: block %s height[%d] is marked invalid",
+                                           __func__, hash.ToString(), pindex->GetHeight()),
                                      0, "duplicate");
             }
             return true;
@@ -6417,94 +6433,12 @@ bool LoadBlockIndex(const CChainParams &chainparams) {
     return true;
 }
 
-std::vector<std::string> stringSplit(const std::string& str, char delim) {
-    std::size_t previous = 0;
-    std::size_t current = str.find_first_of(delim);
-    std::vector<std::string> elems;
-    while (current != std::string::npos) {
-        if (current > previous) {
-            elems.push_back(str.substr(previous, current - previous));
-        }
-        previous = current + 1;
-        current = str.find_first_of(delim, previous);
-    }
-    if (previous != str.size()) {
-        elems.push_back(str.substr(previous));
-    }
-    return elems;
-}
-
 bool InitBlockIndex(const Config &config) {
     LOCK(cs_main);
 
     // Check whether we're already initialized
     if (chainActive.Genesis() != nullptr) {
         return true;
-    }
-
-    if (!gArgs.IsArgSet("-chaininitparam")) {
-        LogPrintf("chain init param not set, use default!\n");
-    } else {
-        // std::string initdata = "1365000000000000:2500000000:131250:fbb4f97162e02d3be2c860c7f4df5d860030b07f:10";
-    std::string initdata = "420000000000000:5000000000:147000:5e1514305163dba48bc5500ada085c787e7e0dbe:10";
-    LogPrintf("init data %s\n", EncodeBase64(initdata));
-
-        std::vector<std::string> initParams = stringSplit(DecodeBase64(gArgs.GetArg("-chaininitparam", "")), ':');
-
-        if (initParams.size() != 5) {
-            return error("Invalid chain init param, not accepted!");
-        }
-
-        if (!ParseUInt64(initParams[0], &firstBlockReward)){
-            return error("Invalid chain init param [first block reward], not accepted!");
-        }
-
-        // if (firstBlockReward < 5000000000) {
-        //     return error("Invalid chain init param [first block reward too small], not accepted!");
-        // }
-
-        if (firstBlockReward > 2100000000000000) {
-            return error("Invalid chain init param [first block reward too big], not accepted!");
-        }
-
-        LogPrintf("first block reward : %d\n", firstBlockReward);
-
-        if (!ParseUInt64(initParams[1], &initialReward)){
-            return error("Invalid chain init param [initial reward], not accepted!");
-        }
-
-        if (initialReward > 5000000000) {
-            return error("Invalid chain init param [initial reward too big], not accepted!");
-        }
-
-        LogPrintf("initial reward : %d\n", initialReward);
-
-        if (!ParseInt32(initParams[2], &subsidyHalvingInterval)){
-            return error("Invalid chain init param [subsidy halving interval], not accepted!");
-        }
-
-        LogPrintf("subsidy halving interval : %d\n", subsidyHalvingInterval);
-
-        if (initParams[3] != "") {
-            if (initParams[3].length() != 40 ) {
-                return error("Invalid chain init param [first block genesis lock script length error], not accepted!");
-            }
-
-            if (!IsHexNumber(initParams[3])) {
-                return error("Invalid chain init param [first block genesis lock script not hex], not accepted!");
-            }
-        }
-
-        firstBlockGenesisLockScript = initParams[3];
-        LogPrintf("first block genesis lock script : %s\n", firstBlockGenesisLockScript);
-
-    
-        if (!ParseInt32(initParams[4], &genesisLockHeight)){
-            return error("Invalid chain init param [genesis lock height], not accepted!");
-        }
-
-        LogPrintf("genesis lock height : %d\n", genesisLockHeight);
-
     }
 
     // Use the provided setting for -txindex in the new database

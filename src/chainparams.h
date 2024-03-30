@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -151,5 +151,8 @@ const CChainParams &Params();
  * @throws std::runtime_error when the chain is not supported.
  */
 void SelectParams(const std::string &chain);
+
+#define CHAIN_GENERATION_WITH_HARDCODED_GENESIS 1
+#define DAA_PROOF_WORKS_MODIFY 1
 
 #endif // MVC_CHAINPARAMS_H

@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -26,13 +26,13 @@ static const uint64_t TESTNET_DEFAULT_MAX_BLOCK_SIZE = INT64_MAX;
 
 /** Default before and after max generated block size parameters and their activation times.
  */
-static const uint64_t MAIN_NEW_BLOCKSIZE_ACTIVATION_TIME = 1563976800; 
-static const uint64_t MAIN_DEFAULT_MAX_GENERATED_BLOCK_SIZE_BEFORE = 32 * ONE_MEGABYTE;
-static const uint64_t MAIN_DEFAULT_MAX_GENERATED_BLOCK_SIZE_AFTER = 128 * ONE_MEGABYTE;
+static const uint64_t MAIN_NEW_BLOCKSIZE_ACTIVATION_TIME = 1713225600; 
+static const uint64_t MAIN_DEFAULT_MAX_GENERATED_BLOCK_SIZE_BEFORE = 128 * ONE_MEGABYTE;
+static const uint64_t MAIN_DEFAULT_MAX_GENERATED_BLOCK_SIZE_AFTER = 4 * ONE_GIGABYTE;
 
-static const uint64_t TESTNET_NEW_BLOCKSIZE_ACTIVATION_TIME = 1563976800; 
-static const uint64_t TESTNET_DEFAULT_MAX_GENERATED_BLOCK_SIZE_BEFORE = 32 * ONE_MEGABYTE;
-static const uint64_t TESTNET_DEFAULT_MAX_GENERATED_BLOCK_SIZE_AFTER = 128 * ONE_MEGABYTE;
+static const uint64_t TESTNET_NEW_BLOCKSIZE_ACTIVATION_TIME = 1713225600; 
+static const uint64_t TESTNET_DEFAULT_MAX_GENERATED_BLOCK_SIZE_BEFORE = 128 * ONE_MEGABYTE;
+static const uint64_t TESTNET_DEFAULT_MAX_GENERATED_BLOCK_SIZE_AFTER = 4 * ONE_GIGABYTE;
 
 
 /** Default for -blockmintxfee, which sets the minimum feerate for a transaction

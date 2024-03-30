@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2020 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -32,6 +32,8 @@ static const unsigned int MAX_STACK_ELEMENTS_BEFORE_GENESIS = 1000;
 // Threshold for nLockTime: below this value it is interpreted as block number,
 // otherwise as UNIX timestamp. Thresold is Tue Nov 5 00:53:20 1985 UTC
 static const unsigned int LOCKTIME_THRESHOLD = 500000000;
+
+extern bool cacheBlockHoleAddress;
 
 template <typename T> std::vector<uint8_t> ToByteVector(const T &in) {
     return std::vector<uint8_t>(in.begin(), in.end());
@@ -252,6 +254,8 @@ public:
     bool IsPushOnly(const_iterator pc) const;
     bool IsPushOnly() const;
 
+    bool IsBlackHoleAddress() const;
+
     /**
      * Returns whether the script is guaranteed to fail at execution, regardless
      * of the initial stack. This allows outputs to be pruned instantly when
@@ -262,10 +266,12 @@ public:
      * this function will return false even though the ouput is unspendable.
      * 
      */
-
     bool IsUnspendable(bool isGenesisEnabled) const {
         if (isGenesisEnabled)
         {
+            if (cacheBlockHoleAddress && this->IsBlackHoleAddress()) {
+                return true;
+            }
             // Genesis restored OP_RETURN functionality. It no longer uncoditionally fails execution
             // The top stack value determines if execution suceeds, and OP_RETURN lock script might be spendable if 
             // unlock script pushes non 0 value to the stack.

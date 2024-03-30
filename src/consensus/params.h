@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,10 +16,9 @@ namespace Consensus {
  */
 struct Params {
     uint256 hashGenesisBlock;
-    int nSubsidyHalvingInterval;
-    /** Block height and hash which BIP34 BIP65 BIP66 BIP68 BIP112 and BIP113 become active*/
+    /** Block height at which BIP34 BIP65 BIP66 BIP68 BIP112 and BIP113 become active*/
     int32_t BitcoinSoftForksHeight;
-    uint256 BitcoinSoftForksHash;
+    // uint256 BitcoinSoftForksHash;
     /** Block height at which UAHF kicks in */
     int32_t uahfHeight;
     /** Block height at which the new DAA becomes active */

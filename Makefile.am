@@ -27,6 +27,7 @@ MVC_UTIL_BIN=
 MVC_WALLET_BIN=
 MVC_NODE_BIN=
 MVC_GUI_BIN=
+MVC_WIN_INSTALLER=$(PACKAGE)-$(PACKAGE_VERSION)-win$(WINDOWS_BITS)-setup$(EXEEXT)
 
 empty :=
 space := $(empty) $(empty)
@@ -45,6 +46,7 @@ BIN_CHECKS=$(top_srcdir)/contrib/devtools/symbol-check.py \
 BUILD_FILES=$(top_srcdir)/share/genbuild.sh \
             $(top_srcdir)/share/on_prod_tag.sh
 
+WINDOWS_PACKAGING = 
 COVERAGE_INFO = baseline_filtered_combined.info baseline.info \
   leveldb_baseline.info test_mvc_filtered.info total_coverage.info \
   baseline_filtered.info functional_test.info functional_test_filtered.info \
@@ -53,8 +55,20 @@ COVERAGE_INFO = baseline_filtered_combined.info baseline.info \
 dist-hook:
 	-$(GIT) archive --format=tar HEAD -- src/clientversion.cpp | $(AMTAR) -C $(top_distdir) -xf -
 
+$(MVC_WIN_INSTALLER): all-recursive
+	$(MKDIR_P) $(top_builddir)/release
+	STRIPPROG="$(STRIP)" $(INSTALL_STRIP_PROGRAM) $(MVCD_BIN) $(top_builddir)/release
+	STRIPPROG="$(STRIP)" $(INSTALL_STRIP_PROGRAM) $(MVC_CLI_BIN) $(top_builddir)/release
+	@test -f $(MAKENSIS) && $(MAKENSIS) -V2 $(top_builddir)/share/setup.nsi || \
+	  echo error: could not build $@
+	@echo built $@
+
 $(if $(findstring src/,$(MAKECMDGOALS)),$(MAKECMDGOALS), none): FORCE
 	$(MAKE) -C src $(patsubst src/%,%,$@)
+
+if TARGET_WINDOWS
+deploy: $(MVC_WIN_INSTALLER)
+endif
 
 $(MVCD_BIN): FORCE
 	$(MAKE) -C src $(@F)
@@ -106,7 +120,8 @@ endif
 
 dist_noinst_SCRIPTS = autogen.sh
 
-EXTRA_DIST = $(BUILD_FILES) $(DIST_CONTRIB) $(DIST_DOCS) $(BIN_CHECKS)
+EXTRA_DIST = $(BUILD_FILES) $(DIST_CONTRIB) $(DIST_DOCS) $(WINDOWS_PACKAGING) $(WINDOWS_PACKAGING) $(BIN_CHECKS)
+CLEANFILES = $(MVC_WIN_INSTALLER)
 
 .INTERMEDIATE: $(COVERAGE_INFO)
 

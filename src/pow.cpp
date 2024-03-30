@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2021 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -492,30 +492,37 @@ uint32_t GetNextCashWorkRequired(const CBlockIndex *pindexPrev,
                                  const CBlockHeader *pblock,
                                  const Config &config) {
     const Consensus::Params &params = config.GetChainParams().GetConsensus();
+#if DAA_PROOF_WORKS_MODIFY
     const int32_t nHeight = pindexPrev->GetHeight();
+#endif
     // This cannot handle the genesis block and early blocks in general.
     assert(pindexPrev);
 
     // Special difficulty rule for testnet:
     // If the new block's timestamp is more than 2* 10 minutes then allow
     // mining of a min-difficulty block.
-    if (config.GetChainParams().NetworkIDString() == CBaseChainParams::TESTNET) {
-        if (params.fPowAllowMinDifficultyBlocks &&
-            (pblock->GetBlockTime() >
-            pindexPrev->GetBlockTime() + 2 * params.nPowTargetSpacing)) {
+#if DAA_PROOF_WORKS_MODIFY
+    if (params.fPowAllowMinDifficultyBlocks) {
+        if (pblock->GetBlockTime() >
+            pindexPrev->GetBlockTime() + 2 * params.nPowTargetSpacing) {
             return UintToArith256(params.powLimit).GetCompact();
         }
     } else {
-        if (params.fPowAllowMinDifficultyBlocks &&
-            nHeight >10 && 
-            nHeight <2200 && 
+        if (nHeight >1858 && nHeight <2166) {
+            if (pblock->GetBlockTime() >
+                pindexPrev->GetBlockTime() + 2 * params.nPowTargetSpacing) {
+                return UintToArith256(params.powLimit).GetCompact();
+            }
+        }
+    }
+#else
+    if (params.fPowAllowMinDifficultyBlocks &&
             (pblock->GetBlockTime() >
             pindexPrev->GetBlockTime() + 2 * params.nPowTargetSpacing)) {
             return UintToArith256(params.powLimit).GetCompact();
         }
     }
-
-
+#endif
     // Compute the difficulty based on the full adjustment interval.
     
     assert(nHeight >= 6);

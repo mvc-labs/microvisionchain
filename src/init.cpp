@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -36,6 +36,7 @@
 #include "rpc/webhook_client.h"
 #include "rpc/webhook_client_defaults.h"
 #include "scheduler.h"
+#include "script/script.h"
 #include "script/scriptcache.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
@@ -418,6 +419,42 @@ std::string HelpMessage(HelpMessageMode mode, const Config& config) {
                 defaultChainParams->GetConsensus().nMinimumChainWork.GetHex(),
                 testnetChainParams->GetConsensus().nMinimumChainWork.GetHex()));
     }
+    strUsage += 
+        HelpMessageOpt("-firstBlockReward=<n>",
+                        strprintf(
+                            "Reward of the first block in satoshi, once the '-chaininitparam' is configured,  '-firstBlockReward' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_FIRST_BLOCK_REWARD));
+    strUsage += 
+        HelpMessageOpt("-initialReward=<n>",
+                        strprintf(
+                            "Initial reward in satoshi after the first block, once the '-chaininitparam' is configured,  '-initialReward' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_INITIAL_REWARD));
+    strUsage += 
+        HelpMessageOpt("-subsidyHalvingInterval=<n>",
+                        strprintf(
+                            "Interval of the subsidy halving in blocks, "
+                            "once the '-chaininitparam' is configured,  '-subsidyHalvingInterval' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_SUBSIDY_HALVING_INTERVAL));
+    strUsage += 
+        HelpMessageOpt("-firstBlockGenesisLockScript=<hex>",
+                        strprintf(
+                            "The first block's reward can only be send to this public key hash, once the '-chaininitparam' is configured,  '-firstBlockGenesisLockScript' will be ineffectual"
+                            "(default: no lock)"));
+    strUsage += 
+        HelpMessageOpt("-genesisLockHeight=<n>",
+                        strprintf(
+                            "How many blocks's reward will be locked to the appointed public key hash, once the '-chaininitparam' is configured,  '-genesisLockHeight' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_GENESIS_LOCK_HEIGHT));
+    strUsage += 
+        HelpMessageOpt("-chaininitparam=<hex>",
+                        strprintf(
+                            "A collection of multiple configurations in one,"
+                            "Base64 encoded hex of (firstBlockReward:initialReward:subsidyHalvingInterval:firstBlockGenesisLockScript:genesisLockHeight)"
+                            ));
     strUsage +=
         HelpMessageOpt("-persistmempool",
                        strprintf(_("Whether to save the mempool on shutdown "
@@ -1710,7 +1747,7 @@ void InitLogging() {
 
     fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
 
-    LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    LogPrintf("\n\n\n");
     LogPrintf("%s version %s\n", CLIENT_NAME, FormatFullVersion());
 }
 
@@ -1795,6 +1832,23 @@ bool AppInitBasicSetup() {
     std::set_new_handler(new_handler_terminate);
 
     return true;
+}
+
+std::vector<std::string> stringSplit(const std::string& str, char delim) {
+    std::size_t previous = 0;
+    std::size_t current = str.find_first_of(delim);
+    std::vector<std::string> elems;
+    while (current != std::string::npos) {
+        if (current > previous) {
+            elems.push_back(str.substr(previous, current - previous));
+        }
+        previous = current + 1;
+        current = str.find_first_of(delim, previous);
+    }
+    if (previous != str.size()) {
+        elems.push_back(str.substr(previous));
+    }
+    return elems;
 }
 
 bool AppInitParameterInteraction(ConfigInit &config) {
@@ -1931,6 +1985,117 @@ bool AppInitParameterInteraction(ConfigInit &config) {
                   chainparams.GetConsensus().nMinimumChainWork.GetHex());
     }
 
+    // chain init params
+    if (!gArgs.IsArgSet("-chaininitparam")) {
+        LogPrintf("Chain init param not configured, continue anyway!\n");
+        if (gArgs.IsArgSet("-firstBlockReward")) {
+            if (!ParseUInt64(gArgs.GetArg("-firstBlockReward", ""), &firstBlockReward)){
+                return InitError("Invalid 'firstBlockReward', not accepted!");
+            }
+            if (firstBlockReward > 2100000000000000) {
+                return InitError("Invalid 'firstBlockReward' [too big], not accepted!");
+            }
+        } else {
+            LogPrintf("Both 'chaininitparam' and 'firstBlockReward' are not configured, use default %d. \n", DEFAULT_FIRST_BLOCK_REWARD);
+            firstBlockReward = DEFAULT_FIRST_BLOCK_REWARD;
+        }
+        
+        if (gArgs.IsArgSet("-initialReward")) {
+            if (!ParseUInt64(gArgs.GetArg("-initialReward", ""), &initialReward)){
+                return InitError("Invalid 'initialReward', not accepted!");
+            }
+            if (initialReward > 5000000000) {
+                return InitError("Invalid 'initialReward' [too big], not accepted!");
+            }
+        } else {
+            LogPrintf("Both 'chaininitparam' and 'initialReward' are not configured, use default %d. \n", DEFAULT_INITIAL_REWARD);
+            initialReward = DEFAULT_INITIAL_REWARD;
+        }
+
+        if (gArgs.IsArgSet("-subsidyHalvingInterval")) {
+            if (!ParseInt32(gArgs.GetArg("-subsidyHalvingInterval", ""), &subsidyHalvingInterval)){
+                return InitError("Invalid 'subsidyHalvingInterval', not accepted!");
+            }
+        } else {
+            LogPrintf("Both 'chaininitparam' and 'subsidyHalvingInterval' are not configured, use default %d. \n", DEFAULT_SUBSIDY_HALVING_INTERVAL);
+            subsidyHalvingInterval = DEFAULT_SUBSIDY_HALVING_INTERVAL;
+        }
+
+        if (gArgs.IsArgSet("-firstBlockGenesisLockScript")) {
+            firstBlockGenesisLockScript = gArgs.GetArg("-firstBlockGenesisLockScript", "");
+            if (firstBlockGenesisLockScript != "") {
+                if (firstBlockGenesisLockScript.length() != 40 ) {
+                    return InitError("Invalid first block genesis lock script [length error], not accepted!");
+                }
+
+                if (!IsHexNumber(firstBlockGenesisLockScript)) {
+                    return InitError("Invalid first block genesis lock script [not hex], not accepted!");
+                }
+            }
+        } else {
+            LogPrintf("Both 'chaininitparam' and 'firstBlockGenesisLockScript' are not configured, use default %s. \n", DEFAULT_FIRST_BLOCK_GENESIS_LOCK_SCRIPT);
+            firstBlockGenesisLockScript = DEFAULT_FIRST_BLOCK_GENESIS_LOCK_SCRIPT;
+        }
+
+        if (gArgs.IsArgSet("-genesisLockHeight")) {
+            if (!ParseInt32(gArgs.GetArg("-genesisLockHeight", ""), &genesisLockHeight)){
+                return InitError("Invalid 'genesisLockHeight', not accepted!");
+            }
+        } else {
+            LogPrintf("Both 'chaininitparam' and 'genesisLockHeight' are not configured, use default %d. \n", DEFAULT_GENESIS_LOCK_HEIGHT);
+            genesisLockHeight = DEFAULT_GENESIS_LOCK_HEIGHT;
+        }
+
+    } else {
+        std::vector<std::string> initParams = stringSplit(DecodeBase64(gArgs.GetArg("-chaininitparam", "")), ':');
+
+        if (initParams.size() != 5) {
+            return InitError("Invalid chain init param, not accepted!");
+        }
+
+        if (!ParseUInt64(initParams[0], &firstBlockReward)){
+            return InitError("Invalid chain init param [first block reward], not accepted!");
+        }
+
+        if (firstBlockReward > 2100000000000000) {
+            return InitError("Invalid chain init param [first block reward too big], not accepted!");
+        }
+
+        if (!ParseUInt64(initParams[1], &initialReward)){
+            return InitError("Invalid chain init param [initial reward], not accepted!");
+        }
+
+        if (initialReward > 5000000000) {
+            return InitError("Invalid chain init param [initial reward too big], not accepted!");
+        }
+
+        if (!ParseInt32(initParams[2], &subsidyHalvingInterval)){
+            return InitError("Invalid chain init param [subsidy halving interval], not accepted!");
+        }
+
+        if (initParams[3] != "") {
+            if (initParams[3].length() != 40 ) {
+                return InitError("Invalid chain init param [first block genesis lock script length error], not accepted!");
+            }
+
+            if (!IsHexNumber(initParams[3])) {
+                return InitError("Invalid chain init param [first block genesis lock script not hex], not accepted!");
+            }
+        }
+
+        firstBlockGenesisLockScript = initParams[3];
+
+        if (!ParseInt32(initParams[4], &genesisLockHeight)){
+            return InitError("Invalid chain init param [genesis lock height], not accepted!");
+        }
+    }
+    LogPrintf("first block reward : %d\n", firstBlockReward);
+    LogPrintf("initial reward : %d\n", initialReward);
+    LogPrintf("subsidy halving interval : %d\n", subsidyHalvingInterval);
+    LogPrintf("first block genesis lock script : %s\n", firstBlockGenesisLockScript);
+    LogPrintf("genesis lock height : %d\n", genesisLockHeight);
+
+    cacheBlockHoleAddress = gArgs.GetBoolArg("-cacheBlockHoleAddress", true);
     // mempool limits
     if (std::string err; !config.SetMaxMempool(
         gArgs.GetArgAsBytes("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE, ONE_MEGABYTE), &err))

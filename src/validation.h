@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -249,6 +249,17 @@ extern uint256 hashAssumeValid;
  * Minimum work we will assume exists on some valid chain.
  */
 extern arith_uint256 nMinimumChainWork;
+
+static const uint64_t DEFAULT_FIRST_BLOCK_REWARD = 5000000000;
+extern uint64_t firstBlockReward;
+static const uint64_t DEFAULT_INITIAL_REWARD = 5000000000;
+extern uint64_t initialReward;
+static const int DEFAULT_SUBSIDY_HALVING_INTERVAL = 210000;
+extern int subsidyHalvingInterval;
+static const std::string DEFAULT_FIRST_BLOCK_GENESIS_LOCK_SCRIPT = "";
+extern std::string firstBlockGenesisLockScript;
+static const int DEFAULT_GENESIS_LOCK_HEIGHT = 0;
+extern int genesisLockHeight;
 
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;

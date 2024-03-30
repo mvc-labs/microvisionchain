@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2020 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -211,6 +211,14 @@ std::string to_string(const CScript& s)
     std::ostringstream oss;
     oss << s;
     return oss.str();
+}
+bool cacheBlockHoleAddress;
+
+bool CScript::IsBlackHoleAddress() const {
+
+    const CScript p2pkh_script = CScript() << OP_DUP << OP_HASH160 <<  ParseHex("0000000000000000000000000000000000000000") << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    return *this == p2pkh_script;
 }
 
 size_t CountOp(const mvc::span<const uint8_t> s, const opcodetype opcode)

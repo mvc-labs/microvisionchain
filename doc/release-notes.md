@@ -1,3 +1,22 @@
+# MVC version 0.2.0 Release Notes
+
+
+* Scale the default max block size up to 4 Gigabytes from 128 megabytes(activation timestamp 1713225600).
+* Added more intuitive startup configuration items.
+* Hardcode the ASERT-DAA's anchor parameters, do simple check  instead of MTP check.
+* Modify ChainTxData to make `verificationprogress` reasonable.
+* Add new configuration items to control blackhole address's CoinsViewCache.
+* The index service for P2PKH and MetaContract Fungible Token (FT) assets.
+* Add fixed seed nodes and the script (in python) to generate list of seed nodes.
+* Add some macro definitions for new chain creation from MVC.
+* Support cross-platform compilation (on going) .
+* Add new checkpoints.
+* Bug fixed and redundant code removed;
+* Copyright updated.
+* Version updated.
+
+See details [here](./release-notes-v0.2.0.md) .
+
 # MVC version 0.1.4 Release Notes
 
 Added ASERT difficulty adjustment algorithm with two days half-life, aka, aserti3-2d. 

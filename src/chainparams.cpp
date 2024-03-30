@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -45,14 +45,17 @@ static CBlock CreateGenesisBlock(const char *pszTimestamp,
     genesis.nNonce = nNonce;
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
+#if CHAIN_GENERATION_WITH_HARDCODED_GENESIS
     if (isTestNet) {
+#endif
         genesis.hashPrevBlock.SetNull();
         genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
+#if CHAIN_GENERATION_WITH_HARDCODED_GENESIS
     } else {
         genesis.hashPrevBlock.SetHex("00000000000000000102d94fde9bd0807a2cc7582fe85dd6349b73ce4e8d9322");
         genesis.hashMerkleRoot.SetHex("da2b9eb7e8a3619734a17b55c47bdd6fd855b0afa9c7e14e3a164a279e51bba9");
     }
-
+#endif
     return genesis;
 }
 
@@ -75,6 +78,55 @@ static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce,
                               nBits, nVersion, genesisReward, isTestNet);
 }
 
+#define NEW_GENESIS_BLOCK 0
+#if NEW_GENESIS_BLOCK
+#include "arith_uint256.h"
+bool checkProofOfWork(uint256 hash, uint32_t nBits, const uint256 powLimit) {
+    bool fNegative;
+    bool fOverflow;
+    arith_uint256 bnTarget;
+
+    bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
+    
+    // Check range
+    if (fNegative || bnTarget == 0 || fOverflow ||
+        bnTarget > UintToArith256(powLimit)) {
+        return false;
+    }
+
+    // Check proof of work matches claimed amount
+    if (UintToArith256(hash) > bnTarget) {
+        return false;
+    }
+
+    return true;
+}
+
+const CBlock newGenesisBlock(uint32_t nTime,
+                    uint32_t nBits, int32_t nVersion,
+                    const Amount genesisReward,
+                    const uint256 powLimit,
+                    bool isTestNet) {
+    CBlock genesis;
+    uint32_t nonce = 0;
+    printf("Generating new genesis block, could take a while...\n");
+    while (1) {
+        genesis = CreateGenesisBlock(nTime, nonce, nBits, nVersion, genesisReward, isTestNet);
+        if (checkProofOfWork(genesis.GetHash(), nBits, powLimit)) {
+            printf("\n----------NEW GENESIS BLOCK--------\n");
+            printf(" nTime : %d \n", nTime);
+            printf(" nBits : %d \n", nBits);
+            printf(" nonce : %d \n", nonce);
+            printf(" hash  : %s \n", genesis.GetHash().GetHex().c_str());
+            printf(" mrekle: %s \n", genesis.hashMerkleRoot.GetHex().c_str());
+            break;
+        }
+        nonce ++;
+    };
+
+    return genesis;
+}
+#endif
 /**
  * Main network
  */
@@ -89,16 +141,15 @@ class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = "main";
-        consensus.nSubsidyHalvingInterval = 210000;
         consensus.BitcoinSoftForksHeight = 8000;
-        consensus.BitcoinSoftForksHash = uint256S(
-            "00000000000000001573688db762f2e03cfe9bc7c6da8496c3f14743166d303a");
+        // consensus.BitcoinSoftForksHash = uint256S(
+        //     "00000000000000001573688db762f2e03cfe9bc7c6da8496c3f14743166d303a");
         consensus.powLimit = uint256S(
             "00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         // two weeks
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60;
         consensus.nPowTargetSpacing = 10 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
+        consensus.fPowAllowMinDifficultyBlocks = false;
         // 95% of 2016
         consensus.nRuleChangeActivationThreshold = 1916;
         // nPowTargetTimespan / nPowTargetSpacing
@@ -110,10 +161,15 @@ public:
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
         // June 13, 2023 hard fork
         consensus.asertActivationTime = 1686636000;
+        consensus.asertAnchorParams = Consensus::Params::ASERTAnchor {
+            21256,         // anchor block height
+            0x1836845b,    // anchor block nBits
+            1686641614,    // anchor block previous block timestamp
+        };
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S(
-            "000000000000000000000000000000000000000000021e0be558cbec88f59787");
+            "0000000000000000000000000000000000000000001005d44e8d565081076370");
 
         // By default assume that the signatures in ancestors of this block are
         // valid.
@@ -144,7 +200,10 @@ public:
         netMagic[3] = 0x96;
         nDefaultPort = 9883;
         nPruneAfterHeight = 100000;
-
+#if NEW_GENESIS_BLOCK
+        genesis = newGenesisBlock(1711638701,0x1d00ffff,0x20000000, 50 * COIN, consensus.powLimit,false);
+        exit(0);
+#endif
         genesis = CreateGenesisBlock(0x5BEDB819, 0x4D8FDFF4, 0x18021FDB, 0x20000000,
                                      50 * COIN, false);
         consensus.hashGenesisBlock = genesis.GetHash();
@@ -174,6 +233,7 @@ public:
 
         checkpointData = { {
                 {0       ,uint256S("000000000000000001d956714215d96ffc00e0afda4cd0a96c96f8d802b1662b")},
+                // Block height at which genesis lock stops
                 {10      ,uint256S("000000005ed7fcdbc7b1e02b2cade8aa5a6800d5c8266f935b2c0f26e420fb1b")},
                 {100     ,uint256S("0000000000000efeb84247cba43f34a88587113ef2382f1cc97a067ec91032e9")},
                 {1000    ,uint256S("000000000000040c71f55cc180ae44c9fe54c21b5b69ace211275ed55ba52c33")},
@@ -183,24 +243,29 @@ public:
                 {5000    ,uint256S("00000000000000000a3ab470c8ef06817771968eb788625e71debfe893be5f83")},
                 {6000    ,uint256S("000000000000000006990a28e7ffff8d26ce1496b3db2c0c0563fcec3df322ac")},
                 {7000    ,uint256S("00000000000000000beba1611b710233fac175805ac059078b437c4fbe027b0f")},
+                // Block height at which BIP34 BIP65 BIP66 BIP68 BIP112 and BIP113 becomes active
                 {8000    ,uint256S("00000000000000001573688db762f2e03cfe9bc7c6da8496c3f14743166d303a")},
                 {9000    ,uint256S("00000000000000001a40b48f48bf7bef5c3fc7d4e6cb853a43769a4333e6b175")},
                 {10000   ,uint256S("0000000000000000267cebf54e6744ea0ca3810dc9ac9a45f9bf2af9d1cc202e")},
                 {15000   ,uint256S("00000000000000001e42eaa37721614e3ccabca5060f3bcbb195021057564924")},
                 {20000   ,uint256S("00000000000000000d72037cdd71687274a92e868ca934349d5b3933c604d97e")},
+                // Block height at which ASERT DAA becomes active
+                {21256   ,uint256S("0000000000000000198c1b7ebd8e6bd5799677df335266c5fdc7497d9d888642")},
+                {40000   ,uint256S("000000000000000012324eaeaf85f43539018e693c3c391b7dd90f1d310ad5b1")},
+                {63000   ,uint256S("00000000000000000345a721609e094acc6577758783c0ae27c680a15e5f577c")},
             }};
 
         // Data as of block
-        // 000000000000000001d2ce557406b017a928be25ee98906397d339c3f68eec5d
-        // (height 523992).
+        // 00000000000000000a6d8c52708fde5cb1cb84c33dab6120315a9ea6e13e96c8
+        // (height 63095).
         chainTxData = ChainTxData{
             // UNIX timestamp of last known number of transactions.
-            1522608016,
+            1711339023,
             // Total number of transactions between genesis and that timestamp
             // (the tx=... number in the SetBestChain mvcd.log lines)
-            248589038,
+            5545024,
             // Estimated number of transactions per second after that timestamp.
-            3.2};
+            0.1510394335512};
 
         defaultBlockSizeParams = DefaultBlockSizeParams{
             // activation time 
@@ -226,10 +291,9 @@ class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
         strNetworkID = "test";
-        consensus.nSubsidyHalvingInterval = 168000;
         consensus.BitcoinSoftForksHeight = 227931;
-        consensus.BitcoinSoftForksHash = uint256S(
-            "000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8");
+        // consensus.BitcoinSoftForksHash = uint256S(
+        //     "000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8");
         consensus.powLimit = uint256S(
             "00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         // two weeks

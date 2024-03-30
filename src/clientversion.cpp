@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2022 The Bitcoin Core developers
-// Copyright (c) 2021-2023 The MVC developers
+// Copyright (c) 2021-2024 The MVC developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -102,7 +102,7 @@ std::string FormatFullVersion() {
 
 /**
  * Format the subversion field according to BIP 14 spec
- * (https://github.com/mvc/bips/blob/master/bip-0014.mediawiki)
+ * (https://github.com/bitcoin/bips/blob/master/bip-0014.mediawiki)
  */
 std::string FormatSubVersion(const std::string &name, int nClientVersion,
                              const std::vector<std::string> &comments) {
