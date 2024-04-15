@@ -310,10 +310,15 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
         consensus.asertActivationTime = 1685426400;
+        consensus.asertAnchorParams = Consensus::Params::ASERTAnchor {
+            39112,         // anchor block height
+            0x1D00AD59,    // anchor block nBits
+            1685430375,    // anchor block previous block timestamp
+        };
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S(
-            "000000000000000000000000000000000000000000a0f3064330647e2f6c4828");
+            "0000000000000000000000000000000000000000000000001388a1c5c60f2803");
 
         // By default assume that the signatures in ancestors of this block are
         // valid.
@@ -371,20 +376,22 @@ public:
         fMineBlocksOnDemand = false;
 
         checkpointData = { {
-            {0, uint256S("000000005abc148d1e91534997189fcce59056c980a7164e8eca2e2ce29a1575")}
+            {0,     uint256S("000000005abc148d1e91534997189fcce59056c980a7164e8eca2e2ce29a1575")},
+            // Block height at which ASERT DAA becomes active
+            {39112, uint256S("00000000756eb376b63f0bcb4b818b8f13f58bd29591f63fe677932fa6d7ea0c")}
             }};
 
         // Data as of block
-        // 000000000000000001d2ce557406b017a928be25ee98906397d339c3f68eec5d
-        // (height 523992).
+        // 0000000070b8903fd89cc2ccb4ada9a570fd2b6c8a0174d8f6b6bd66ebb0b4be
+        // (height 85317).
         chainTxData = ChainTxData{
             // UNIX timestamp of last known number of transactions.
-            1522608016,
+            1713165358,
             // Total number of transactions between genesis and that timestamp
             // (the tx=... number in the SetBestChain mvcd.log lines)
-            248589038,
+            4609228,
             // Estimated number of transactions per second after that timestamp.
-            3.2};
+            0.09348262988};
             
         defaultBlockSizeParams = DefaultBlockSizeParams{
             // activation time 
