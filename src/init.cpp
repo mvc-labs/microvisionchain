@@ -419,42 +419,7 @@ std::string HelpMessage(HelpMessageMode mode, const Config& config) {
                 defaultChainParams->GetConsensus().nMinimumChainWork.GetHex(),
                 testnetChainParams->GetConsensus().nMinimumChainWork.GetHex()));
     }
-    strUsage += 
-        HelpMessageOpt("-firstBlockReward=<n>",
-                        strprintf(
-                            "Reward of the first block in satoshi, once the '-chaininitparam' is configured,  '-firstBlockReward' will be ineffectual"
-                            "(default: %u)",
-                            DEFAULT_FIRST_BLOCK_REWARD));
-    strUsage += 
-        HelpMessageOpt("-initialReward=<n>",
-                        strprintf(
-                            "Initial reward in satoshi after the first block, once the '-chaininitparam' is configured,  '-initialReward' will be ineffectual"
-                            "(default: %u)",
-                            DEFAULT_INITIAL_REWARD));
-    strUsage += 
-        HelpMessageOpt("-subsidyHalvingInterval=<n>",
-                        strprintf(
-                            "Interval of the subsidy halving in blocks, "
-                            "once the '-chaininitparam' is configured,  '-subsidyHalvingInterval' will be ineffectual"
-                            "(default: %u)",
-                            DEFAULT_SUBSIDY_HALVING_INTERVAL));
-    strUsage += 
-        HelpMessageOpt("-firstBlockGenesisLockScript=<hex>",
-                        strprintf(
-                            "The first block's reward can only be send to this public key hash, once the '-chaininitparam' is configured,  '-firstBlockGenesisLockScript' will be ineffectual"
-                            "(default: no lock)"));
-    strUsage += 
-        HelpMessageOpt("-genesisLockHeight=<n>",
-                        strprintf(
-                            "How many blocks's reward will be locked to the appointed public key hash, once the '-chaininitparam' is configured,  '-genesisLockHeight' will be ineffectual"
-                            "(default: %u)",
-                            DEFAULT_GENESIS_LOCK_HEIGHT));
-    strUsage += 
-        HelpMessageOpt("-chaininitparam=<hex>",
-                        strprintf(
-                            "A collection of multiple configurations in one,"
-                            "Base64 encoded hex of (firstBlockReward:initialReward:subsidyHalvingInterval:firstBlockGenesisLockScript:genesisLockHeight)"
-                            ));
+
     strUsage +=
         HelpMessageOpt("-persistmempool",
                        strprintf(_("Whether to save the mempool on shutdown "
@@ -959,7 +924,8 @@ std::string HelpMessage(HelpMessageMode mode, const Config& config) {
                   DEFAULT_DATA_CARRIER_SIZE));
     strUsage += HelpMessageOpt(
         "-maxstackmemoryusagepolicy",
-        strprintf(_("Set maximum stack memory usage used for script verification "),
+        strprintf(_("Set maximum stack memory usage used for script verification "
+                    "default:%u MB, 0 = unlimited"),
                   DEFAULT_STACK_MEMORY_USAGE_POLICY_AFTER_GENESIS/ONE_MEGABYTE));
     strUsage +=
         HelpMessageOpt("-maxopsperscriptpolicy=<n>",
@@ -1051,7 +1017,9 @@ std::string HelpMessage(HelpMessageMode mode, const Config& config) {
     strUsage += HelpMessageGroup(_("Block creation options:"));
     strUsage += HelpMessageOpt(
         "-blockmaxsize=<n>",
-        strprintf(_("Set maximum block size in bytes we will mine. "),
+        strprintf(_("Set maximum block size in bytes we will mine. "
+                    "Mainnet: %d MB before %s and %d MB after, "
+                    "Testnet: %d MB before %s and %d MB after."),
                     defaultChainParams->GetDefaultBlockSizeParams().maxGeneratedBlockSizeBefore / ONE_MEGABYTE,
                     DateTimeStrFormat("%Y-%m-%d %H:%M:%S", defaultChainParams->GetDefaultBlockSizeParams().blockSizeActivationTime),
                     defaultChainParams->GetDefaultBlockSizeParams().maxGeneratedBlockSizeAfter/ONE_MEGABYTE,
@@ -1095,103 +1063,6 @@ std::string HelpMessage(HelpMessageMode mode, const Config& config) {
                            "Disable BIP30 checks when connecting a block. "
                            "This flag can not be set on the mainnet.");
     }
-
-    /** Block assembler */
-    strUsage += HelpMessageOpt(
-        "-blockassembler=<type>",
-        strprintf(_("Set the type of block assembler to use for mining. Supported options are "
-                    "JOURNALING. (default: %s)"),
-                  enum_cast<std::string>(mining::DEFAULT_BLOCK_ASSEMBLER_TYPE).c_str()));
-    strUsage += HelpMessageOpt(
-        "-jbamaxtxnbatch=<max batch size>",
-        strprintf(_("Set the maximum number of transactions processed in a batch by the journaling block assembler "
-                "(default: %d)"), mining::JournalingBlockAssembler::DEFAULT_MAX_SLOT_TRANSACTIONS)
-    );
-    if (showDebug) {
-        strUsage += HelpMessageOpt(
-            "-jbafillafternewblock",
-            strprintf(_("After a new block has been found it can take a short while for the journaling block assembler "
-                        "to catch up and return a new candidate containing every transaction in the mempool. "
-                        "If this flag is 1, calling getminingcandidate will wait until the JBA has caught up "
-                        "and always return a candidate with every available transaction. If it is 0, calls to "
-                        "getminingcandidate will always return straight away but may occasionally only contain a "
-                        "subset of the available transactions from the mempool (default: %d)"),
-                mining::JournalingBlockAssembler::DEFAULT_NEW_BLOCK_FILL)
-        );
-    }
-
-    strUsage += HelpMessageGroup(_("RPC client/server options:"));
-    strUsage += HelpMessageOpt("-server",
-                               _("Accept command line and JSON-RPC commands"));
-    strUsage += HelpMessageOpt(
-        "-rest", strprintf(_("Accept public REST requests (default: %d)"),
-                           DEFAULT_REST_ENABLE));
-    strUsage += HelpMessageOpt(
-        "-rpcbind=<addr>",
-        _("Bind to given address to listen for JSON-RPC connections. Use "
-          "[host]:port notation for IPv6. This option can be specified "
-          "multiple times (default: bind to all interfaces)"));
-    strUsage +=
-        HelpMessageOpt("-rpccookiefile=<loc>",
-                       _("Location of the auth cookie (default: data dir)"));
-    strUsage += HelpMessageOpt("-rpcuser=<user>",
-                               _("Username for JSON-RPC connections"));
-    strUsage += HelpMessageOpt("-rpcpassword=<pw>",
-                               _("Password for JSON-RPC connections"));
-    strUsage += HelpMessageOpt(
-        "-rpcauth=<userpw>",
-        _("Username and hashed password for JSON-RPC connections. The field "
-          "<userpw> comes in the format: <USERNAME>:<SALT>$<HASH>. A canonical "
-          "python script is included in share/rpcuser. The client then "
-          "connects normally using the "
-          "rpcuser=<USERNAME>/rpcpassword=<PASSWORD> pair of arguments. This "
-          "option can be specified multiple times"));
-    strUsage += HelpMessageOpt(
-        "-rpcport=<port>",
-        strprintf(_("Listen for JSON-RPC connections on <port> (default: %u or "
-                    "testnet: %u)"),
-                  defaultBaseParams->RPCPort(), testnetBaseParams->RPCPort()));
-    strUsage += HelpMessageOpt(
-        "-rpcallowip=<ip>",
-        _("Allow JSON-RPC connections from specified source. Valid for <ip> "
-          "are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. "
-          "1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24). This "
-          "option can be specified multiple times"));
-    strUsage += HelpMessageOpt(
-        "-magicbytes=<hexcode>",
-        _("Allow users to split the test net by changing the magicbytes. "
-          "This option only work on a network different than mainnet. "
-          "default : 0f0f0f0f"));
-    strUsage += HelpMessageOpt(
-        "-rpcthreads=<n>",
-        strprintf(
-            _("Set the number of threads to service RPC calls (default: %d)"),
-            DEFAULT_HTTP_THREADS));
-    strUsage += HelpMessageOpt(
-        "-rpccorsdomain=value",
-        "Domain from which to accept cross origin requests (browser enforced)");
-    strUsage += HelpMessageOpt("-rpcwebhookclientnumthreads=<n>",
-        strprintf(_("Number of threads available for submitting HTTP requests to webhook endpoints. (default: %u, maximum: %u)"),
-            rpc::client::WebhookClientDefaults::DEFAULT_NUM_THREADS, rpc::client::WebhookClientDefaults::MAX_NUM_THREADS));
-    if (showDebug) {
-        strUsage += HelpMessageOpt(
-            "-rpcworkqueue=<n>", strprintf("Set the depth of the work queue to "
-                                           "service RPC calls (default: %d)",
-                                           DEFAULT_HTTP_WORKQUEUE));
-        strUsage += HelpMessageOpt(
-            "-rpcservertimeout=<n>",
-            strprintf("Timeout during HTTP requests (default: %d)",
-                      DEFAULT_HTTP_SERVER_TIMEOUT));
-    }
-     strUsage += HelpMessageOpt(
-        "-invalidcsinterval=<n>",
-         strprintf("Set the time limit on the reception of invalid message checksums from a single node in milliseconds (default: %dms)",
-            DEFAULT_MIN_TIME_INTERVAL_CHECKSUM_MS)) ;
-
-         strUsage += HelpMessageOpt(
-        "-invalidcsfreq=<n>",
-         strprintf("Set the limit on the number of invalid checksums received over a given time period from a single node  (default: %d)",
-            DEFAULT_INVALID_CHECKSUM_FREQUENCY)) ;
 
     /** COrphanTxns */
     strUsage += HelpMessageGroup(_("Orphan txns config :"));
@@ -1423,6 +1294,139 @@ std::string HelpMessage(HelpMessageMode mode, const Config& config) {
         strprintf("Minimum length of valid fork to enter safe mode "
             "(default: %d)", SAFE_MODE_DEFAULT_MIN_FORK_LENGTH));
 
+    /** Block assembler */
+    strUsage += HelpMessageOpt(
+        "-blockassembler=<type>",
+        strprintf(_("Set the type of block assembler to use for mining. Supported options are "
+                    "JOURNALING. (default: %s)"),
+                  enum_cast<std::string>(mining::DEFAULT_BLOCK_ASSEMBLER_TYPE).c_str()));
+    strUsage += HelpMessageOpt(
+        "-jbamaxtxnbatch=<max batch size>",
+        strprintf(_("Set the maximum number of transactions processed in a batch by the journaling block assembler "
+                "(default: %d)"), mining::JournalingBlockAssembler::DEFAULT_MAX_SLOT_TRANSACTIONS)
+    );
+    if (showDebug) {
+        strUsage += HelpMessageOpt(
+            "-jbafillafternewblock",
+            strprintf(_("After a new block has been found it can take a short while for the journaling block assembler "
+                        "to catch up and return a new candidate containing every transaction in the mempool. "
+                        "If this flag is 1, calling getminingcandidate will wait until the JBA has caught up "
+                        "and always return a candidate with every available transaction. If it is 0, calls to "
+                        "getminingcandidate will always return straight away but may occasionally only contain a "
+                        "subset of the available transactions from the mempool (default: %d)"),
+                mining::JournalingBlockAssembler::DEFAULT_NEW_BLOCK_FILL)
+        );
+    }
+
+    strUsage += HelpMessageGroup(_("RPC client/server options:"));
+    strUsage += HelpMessageOpt("-server",
+                               _("Accept command line and JSON-RPC commands"));
+    strUsage += HelpMessageOpt(
+        "-rest", strprintf(_("Accept public REST requests (default: %d)"),
+                           DEFAULT_REST_ENABLE));
+    strUsage += HelpMessageOpt(
+        "-rpcbind=<addr>",
+        _("Bind to given address to listen for JSON-RPC connections. Use "
+          "[host]:port notation for IPv6. This option can be specified "
+          "multiple times (default: bind to all interfaces)"));
+    strUsage +=
+        HelpMessageOpt("-rpccookiefile=<loc>",
+                       _("Location of the auth cookie (default: data dir)"));
+    strUsage += HelpMessageOpt("-rpcuser=<user>",
+                               _("Username for JSON-RPC connections"));
+    strUsage += HelpMessageOpt("-rpcpassword=<pw>",
+                               _("Password for JSON-RPC connections"));
+    strUsage += HelpMessageOpt(
+        "-rpcauth=<userpw>",
+        _("Username and hashed password for JSON-RPC connections. The field "
+          "<userpw> comes in the format: <USERNAME>:<SALT>$<HASH>. A canonical "
+          "python script is included in share/rpcuser. The client then "
+          "connects normally using the "
+          "rpcuser=<USERNAME>/rpcpassword=<PASSWORD> pair of arguments. This "
+          "option can be specified multiple times"));
+    strUsage += HelpMessageOpt(
+        "-rpcport=<port>",
+        strprintf(_("Listen for JSON-RPC connections on <port> (default: %u or "
+                    "testnet: %u)"),
+                  defaultBaseParams->RPCPort(), testnetBaseParams->RPCPort()));
+    strUsage += HelpMessageOpt(
+        "-rpcallowip=<ip>",
+        _("Allow JSON-RPC connections from specified source. Valid for <ip> "
+          "are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. "
+          "1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24). This "
+          "option can be specified multiple times"));
+    strUsage += HelpMessageOpt(
+        "-magicbytes=<hexcode>",
+        _("Allow users to split the test net by changing the magicbytes. "
+          "This option only work on a network different than mainnet. "
+          "default : 0f0f0f0f"));
+    strUsage += HelpMessageOpt(
+        "-rpcthreads=<n>",
+        strprintf(
+            _("Set the number of threads to service RPC calls (default: %d)"),
+            DEFAULT_HTTP_THREADS));
+    strUsage += HelpMessageOpt(
+        "-rpccorsdomain=value",
+        "Domain from which to accept cross origin requests (browser enforced)");
+    strUsage += HelpMessageOpt("-rpcwebhookclientnumthreads=<n>",
+        strprintf(_("Number of threads available for submitting HTTP requests to webhook endpoints. (default: %u, maximum: %u)"),
+            rpc::client::WebhookClientDefaults::DEFAULT_NUM_THREADS, rpc::client::WebhookClientDefaults::MAX_NUM_THREADS));
+    if (showDebug) {
+        strUsage += HelpMessageOpt(
+            "-rpcworkqueue=<n>", strprintf("Set the depth of the work queue to "
+                                           "service RPC calls (default: %d)",
+                                           DEFAULT_HTTP_WORKQUEUE));
+        strUsage += HelpMessageOpt(
+            "-rpcservertimeout=<n>",
+            strprintf("Timeout during HTTP requests (default: %d)",
+                      DEFAULT_HTTP_SERVER_TIMEOUT));
+    }
+     strUsage += HelpMessageOpt(
+        "-invalidcsinterval=<n>",
+         strprintf("Set the time limit on the reception of invalid message checksums from a single node in milliseconds (default: %dms)",
+            DEFAULT_MIN_TIME_INTERVAL_CHECKSUM_MS)) ;
+
+         strUsage += HelpMessageOpt(
+        "-invalidcsfreq=<n>",
+         strprintf("Set the limit on the number of invalid checksums received over a given time period from a single node  (default: %d)",
+            DEFAULT_INVALID_CHECKSUM_FREQUENCY)) ;
+
+    strUsage += 
+        HelpMessageOpt("-chaininitparam=<hex>",
+                        strprintf(
+                            "A collection of multiple configurations in one,"
+                            "Base64 encoded hex of (firstBlockReward:initialReward:subsidyHalvingInterval:firstBlockGenesisLockScript:genesisLockHeight)"
+                            ));
+    strUsage += 
+        HelpMessageOpt("-firstBlockReward=<n>",
+                        strprintf(
+                            "Reward of the first block in satoshi, once the '-chaininitparam' is configured,  '-firstBlockReward' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_FIRST_BLOCK_REWARD));
+    strUsage += 
+        HelpMessageOpt("-initialReward=<n>",
+                        strprintf(
+                            "Initial reward in satoshi after the first block, once the '-chaininitparam' is configured,  '-initialReward' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_INITIAL_REWARD));
+    strUsage += 
+        HelpMessageOpt("-subsidyHalvingInterval=<n>",
+                        strprintf(
+                            "Interval of the subsidy halving in blocks, "
+                            "once the '-chaininitparam' is configured,  '-subsidyHalvingInterval' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_SUBSIDY_HALVING_INTERVAL));
+    strUsage += 
+        HelpMessageOpt("-firstBlockGenesisLockScript=<hex>",
+                        strprintf(
+                            "The first block's reward can only be send to this public key hash, once the '-chaininitparam' is configured,  '-firstBlockGenesisLockScript' will be ineffectual"
+                            "(default: no lock)"));
+    strUsage += 
+        HelpMessageOpt("-genesisLockHeight=<n>",
+                        strprintf(
+                            "How many blocks's reward will be locked to the appointed public key hash, once the '-chaininitparam' is configured,  '-genesisLockHeight' will be ineffectual"
+                            "(default: %u)",
+                            DEFAULT_GENESIS_LOCK_HEIGHT));
 
     return strUsage;
 }
