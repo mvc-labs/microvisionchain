@@ -37,7 +37,7 @@ const std::string CLIENT_NAME("MicroVisionChain");
  *   * if BUILD_DESC is defined, use that literally (output of git-describe)
  *   * if not, but GIT_COMMIT is defined, use
  *     v[maj].[min].[rev].[build]-g[commit]
- *   * otherwise, use v[maj].[min].[rev].[build]-unk
+ *   * otherwise, use v[maj].[min].[rev].[build]
  * finally CLIENT_VERSION_SUFFIX is added
  */
 
@@ -63,7 +63,7 @@ const std::string CLIENT_NAME("MicroVisionChain");
 
 #define BUILD_DESC_FROM_UNKNOWN(maj, min, rev, build)                          \
     "v" DO_STRINGIZE(maj) "." DO_STRINGIZE(min) "." DO_STRINGIZE(              \
-        rev) "." DO_STRINGIZE(build) "-unk"
+        rev) "." DO_STRINGIZE(build)
 
 #ifndef BUILD_DESC
 #ifdef BUILD_SUFFIX
