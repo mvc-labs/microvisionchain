@@ -39,10 +39,9 @@ jobs:
               libboost-test-dev \
               libboost-thread-dev \
               libdb5.3++-dev \
-              libzmq3-dev \
-              libminiupnpc-dev
+              libzmq3-dev
             ./autogen.sh
-            ./configure --without-gui --disable-tests --disable-bench
+            ./configure --without-gui --disable-tests --disable-bench --without-miniupnpc
             make -j"$(nproc)"
           '
 
