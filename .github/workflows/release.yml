@@ -11,39 +11,40 @@ permissions:
 
 jobs:
   build-linux-x86_64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Build binaries in Ubuntu 20.04 container
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            python3 \
-            libssl-dev \
-            libevent-dev \
-            libboost-system-dev \
-            libboost-filesystem-dev \
-            libboost-chrono-dev \
-            libboost-program-options-dev \
-            libboost-test-dev \
-            libboost-thread-dev \
-            libdb5.3++-dev \
-            libzmq3-dev \
-            libminiupnpc-dev
-
-      - name: Build binaries
-        run: |
-          ./autogen.sh
-          ./configure --without-gui --disable-tests --disable-bench
-          make -j"$(nproc)"
+          docker run --rm -v "$PWD:/work" -w /work ubuntu:20.04 bash -lc '
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update
+            apt-get install -y \
+              ca-certificates \
+              build-essential \
+              autoconf \
+              automake \
+              libtool \
+              pkg-config \
+              python3 \
+              libssl-dev \
+              libevent-dev \
+              libboost-system-dev \
+              libboost-filesystem-dev \
+              libboost-chrono-dev \
+              libboost-program-options-dev \
+              libboost-test-dev \
+              libboost-thread-dev \
+              libdb5.3++-dev \
+              libzmq3-dev \
+              libminiupnpc-dev
+            ./autogen.sh
+            ./configure --without-gui --disable-tests --disable-bench
+            make -j"$(nproc)"
+          '
 
       - name: Compute release version
         id: vars
