@@ -558,6 +558,9 @@ std::string HelpMessage(HelpMessageMode mode, const Config& config) {
             strprintf(_("Maximum number of parallel requests to different peers we will issue for "
                         "a block that has exceeded the slow fetch detection timeout (default: %u)"),
                         DEFAULT_MAX_BLOCK_PARALLEL_FETCH));
+        strUsage += HelpMessageOpt("-allowblockdownloadfromclient",
+            strprintf(_("Allow block body download requests from peers that do not advertise NODE_NETWORK. "
+                        "Use only with trusted addnode/whitelisted peers (default: %d)"), false));
     }
 
     strUsage += HelpMessageOpt(
@@ -2354,8 +2357,20 @@ bool AppInitParameterInteraction(ConfigInit &config) {
             return InitError(err);
         }
     }
+    if(std::string err; !config.SetSafeModeMinBlockDifference(gArgs.GetArg("-safemodeminblockdifference", SAFE_MODE_DEFAULT_MIN_POW_DIFFERENCE), &err)) {
+        return InitError(err);
+    }
+    if(std::string err; !config.SetSafeModeMaxForkDistance(gArgs.GetArg("-safemodemaxforkdistance", SAFE_MODE_DEFAULT_MAX_FORK_DISTANCE), &err)) {
+        return InitError(err);
+    }
+    if(std::string err; !config.SetSafeModeMinForkLength(gArgs.GetArg("-safemodeminforklength", SAFE_MODE_DEFAULT_MIN_FORK_LENGTH), &err)) {
+        return InitError(err);
+    }
  
     // Block download
+    if(std::string err; !config.SetAllowBlockDownloadFromClient(gArgs.GetBoolArg("-allowblockdownloadfromclient", false), &err)) {
+        return InitError(err);
+    }
     if(std::string err; !config.SetBlockStallingMinDownloadSpeed(gArgs.GetArg("-blockstallingmindownloadspeed", DEFAULT_MIN_BLOCK_STALLING_RATE), &err)) {
         return InitError(err);
     }

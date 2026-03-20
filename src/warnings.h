@@ -7,6 +7,7 @@
 #ifndef MVC_WARNINGS_H
 #define MVC_WARNINGS_H
 
+#include <cstdint>
 #include <cstdlib>
 #include <string>
 

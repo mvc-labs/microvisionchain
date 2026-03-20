@@ -127,6 +127,7 @@ void GlobalConfig::Reset()
     data->blockDownloadWindow = DEFAULT_BLOCK_DOWNLOAD_WINDOW;
     data->blockDownloadSlowFetchTimeout = DEFAULT_BLOCK_DOWNLOAD_SLOW_FETCH_TIMEOUT;
     data->blockDownloadMaxParallelFetch = DEFAULT_MAX_BLOCK_PARALLEL_FETCH;
+    data->allowBlockDownloadFromClient = false;
 
     // P2P parameters
     data->p2pHandshakeTimeout = DEFAULT_P2P_HANDSHAKE_TIMEOUT_INTERVAL;
@@ -174,6 +175,9 @@ void GlobalConfig::Reset()
     data->safeModeWebhookAddress = "";
     data->safeModeWebhookPort = rpc::client::WebhookClientDefaults::DEFAULT_WEBHOOK_PORT;
     data->safeModeWebhookPath = "";
+    data->safeModeMinBlockDifference = SAFE_MODE_DEFAULT_MIN_POW_DIFFERENCE;
+    data->safeModeMaxForkDistance = SAFE_MODE_DEFAULT_MAX_FORK_DISTANCE;
+    data->safeModeMinForkLength = SAFE_MODE_DEFAULT_MIN_FORK_LENGTH;
 }
 
 void GlobalConfig::SetPreferredBlockFileSize(uint64_t preferredSize) {
@@ -1235,6 +1239,66 @@ std::string GlobalConfig::GetSafeModeWebhookPath() const
     return data->safeModeWebhookPath;
 }
 
+bool GlobalConfig::SetSafeModeMinBlockDifference(int64_t min, std::string* err)
+{
+    if(min == std::numeric_limits<int64_t>::min())
+    {
+        if(err)
+        {
+            *err = "Safe mode minimum block difference value is out of range.";
+        }
+        return false;
+    }
+
+    data->safeModeMinBlockDifference = min;
+    return true;
+}
+
+int64_t GlobalConfig::GetSafeModeMinBlockDifference() const
+{
+    return data->safeModeMinBlockDifference;
+}
+
+bool GlobalConfig::SetSafeModeMaxForkDistance(int64_t max, std::string* err)
+{
+    if(max < 0)
+    {
+        if(err)
+        {
+            *err = "Safe mode maximum fork distance must be >= 0.";
+        }
+        return false;
+    }
+
+    data->safeModeMaxForkDistance = max;
+    return true;
+}
+
+int64_t GlobalConfig::GetSafeModeMaxForkDistance() const
+{
+    return data->safeModeMaxForkDistance;
+}
+
+bool GlobalConfig::SetSafeModeMinForkLength(int64_t min, std::string* err)
+{
+    if(min <= 0)
+    {
+        if(err)
+        {
+            *err = "Safe mode minimum fork length must be greater than 0.";
+        }
+        return false;
+    }
+
+    data->safeModeMinForkLength = min;
+    return true;
+}
+
+int64_t GlobalConfig::GetSafeModeMinForkLength() const
+{
+    return data->safeModeMinForkLength;
+}
+
 // Block download
 bool GlobalConfig::SetBlockStallingMinDownloadSpeed(int64_t min, std::string* err)
 {
@@ -1329,6 +1393,17 @@ bool GlobalConfig::SetBlockDownloadMaxParallelFetch(int64_t max, std::string* er
 uint64_t GlobalConfig::GetBlockDownloadMaxParallelFetch() const
 {
     return data->blockDownloadMaxParallelFetch;
+}
+
+bool GlobalConfig::SetAllowBlockDownloadFromClient(bool allow, std::string* err)
+{
+    data->allowBlockDownloadFromClient = allow;
+    return true;
+}
+
+bool GlobalConfig::GetAllowBlockDownloadFromClient() const
+{
+    return data->allowBlockDownloadFromClient;
 }
 
 // P2P Parameters

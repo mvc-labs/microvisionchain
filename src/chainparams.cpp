@@ -212,10 +212,9 @@ public:
         assert(genesis.hashMerkleRoot ==
                uint256S("da2b9eb7e8a3619734a17b55c47bdd6fd855b0afa9c7e14e3a164a279e51bba9"));
 
-        // Note that of those with the service bits flag, most only support a
-        // subset of possible options.
-        // MicroVisionChain seeder
-        vSeeds.push_back(CDNSSeedData("", "", true));
+        // DNS seeds for bootstrapping peers.
+        vSeeds.push_back(CDNSSeedData("seed1.microvisionchain.com", "seed1.microvisionchain.com"));
+        vSeeds.push_back(CDNSSeedData("seed2.microvisionchain.com", "seed2.microvisionchain.com"));
        
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<uint8_t>(1, 0);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<uint8_t>(1, 5);

@@ -1,0 +1,70 @@
+name: Build And Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-x86_64:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            python3 \
+            libssl-dev \
+            libevent-dev \
+            libboost-system-dev \
+            libboost-filesystem-dev \
+            libboost-chrono-dev \
+            libboost-program-options-dev \
+            libboost-test-dev \
+            libboost-thread-dev \
+            libdb5.3++-dev \
+            libzmq3-dev \
+            libminiupnpc-dev
+
+      - name: Build binaries
+        run: |
+          ./autogen.sh
+          ./configure --without-gui --disable-tests --disable-bench
+          make -j"$(nproc)"
+
+      - name: Compute release version
+        id: vars
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Package artifacts
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          mkdir -p dist/bin
+          cp src/mvcd dist/bin/
+          cp src/mvc-cli dist/bin/
+          cp src/mvc-tx dist/bin/
+          tar -czf "microvisionchain-${VERSION}.tar.gz" -C dist bin
+          sha256sum "microvisionchain-${VERSION}.tar.gz" > "microvisionchain-${VERSION}.tar.gz.sha256"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          files: |
+            microvisionchain-${{ steps.vars.outputs.version }}.tar.gz
+            microvisionchain-${{ steps.vars.outputs.version }}.tar.gz.sha256

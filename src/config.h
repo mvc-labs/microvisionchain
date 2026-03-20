@@ -106,6 +106,7 @@ public:
     virtual int64_t GetBlockDownloadWindow() const = 0;
     virtual int64_t GetBlockDownloadSlowFetchTimeout() const = 0;
     virtual uint64_t GetBlockDownloadMaxParallelFetch() const = 0;
+    virtual bool GetAllowBlockDownloadFromClient() const = 0;
 
     // P2P parameters
     virtual int64_t GetP2PHandshakeTimeout() const = 0;
@@ -151,6 +152,9 @@ public:
     virtual std::string GetSafeModeWebhookAddress() const = 0;
     virtual int16_t GetSafeModeWebhookPort() const = 0;
     virtual std::string GetSafeModeWebhookPath() const = 0;
+    virtual int64_t GetSafeModeMinBlockDifference() const = 0;
+    virtual int64_t GetSafeModeMaxForkDistance() const = 0;
+    virtual int64_t GetSafeModeMinForkLength() const = 0;
 
 protected:
     virtual ~Config() = default;
@@ -229,6 +233,7 @@ public:
     virtual bool SetBlockDownloadWindow(int64_t window, std::string* err = nullptr) = 0;
     virtual bool SetBlockDownloadSlowFetchTimeout(int64_t timeout, std::string* err = nullptr) = 0;
     virtual bool SetBlockDownloadMaxParallelFetch(int64_t max, std::string* err = nullptr) = 0;
+    virtual bool SetAllowBlockDownloadFromClient(bool allow, std::string* err = nullptr) = 0;
 
     // P2P parameters
     virtual bool SetP2PHandshakeTimeout(int64_t timeout, std::string* err = nullptr) = 0;
@@ -291,6 +296,9 @@ public:
     virtual bool SetSoftConsensusFreezeDuration( std::int64_t duration, std::string* err ) = 0;
     // Safe mode params
     virtual bool SetSafeModeWebhookURL(const std::string& url, std::string* err = nullptr) = 0;
+    virtual bool SetSafeModeMinBlockDifference(int64_t min, std::string* err = nullptr) = 0;
+    virtual bool SetSafeModeMaxForkDistance(int64_t max, std::string* err = nullptr) = 0;
+    virtual bool SetSafeModeMinForkLength(int64_t min, std::string* err = nullptr) = 0;
 
 
 protected:
@@ -504,6 +512,8 @@ public:
     int64_t GetBlockDownloadSlowFetchTimeout() const override;
     bool SetBlockDownloadMaxParallelFetch(int64_t max, std::string* err = nullptr) override;
     uint64_t GetBlockDownloadMaxParallelFetch() const override;
+    bool SetAllowBlockDownloadFromClient(bool allow, std::string* err = nullptr) override;
+    bool GetAllowBlockDownloadFromClient() const override;
 
     // P2P parameters
     bool SetP2PHandshakeTimeout(int64_t timeout, std::string* err = nullptr) override;
@@ -571,6 +581,12 @@ public:
     std::string GetSafeModeWebhookAddress() const override;
     int16_t GetSafeModeWebhookPort() const override;
     std::string GetSafeModeWebhookPath() const override;
+    bool SetSafeModeMinBlockDifference(int64_t min, std::string* err = nullptr) override;
+    int64_t GetSafeModeMinBlockDifference() const override;
+    bool SetSafeModeMaxForkDistance(int64_t max, std::string* err = nullptr) override;
+    int64_t GetSafeModeMaxForkDistance() const override;
+    bool SetSafeModeMinForkLength(int64_t min, std::string* err = nullptr) override;
+    int64_t GetSafeModeMinForkLength() const override;
 
     // Reset state of this object to match a newly constructed one. 
     // Used in constructor and for unit testing to always start with a clean state
@@ -687,6 +703,7 @@ private:
         int64_t blockDownloadWindow;
         int64_t blockDownloadSlowFetchTimeout;
         uint64_t blockDownloadMaxParallelFetch;
+        bool allowBlockDownloadFromClient;
 
         // P2P parameters
         int64_t p2pHandshakeTimeout;
@@ -720,6 +737,9 @@ private:
         std::string safeModeWebhookAddress;
         int16_t safeModeWebhookPort;
         std::string safeModeWebhookPath;
+        int64_t safeModeMinBlockDifference;
+        int64_t safeModeMaxForkDistance;
+        int64_t safeModeMinForkLength;
 
         std::optional<bool> mDisableBIP30Checks;
 
@@ -1149,6 +1169,8 @@ public:
     int64_t GetBlockDownloadSlowFetchTimeout() const override { return DEFAULT_BLOCK_DOWNLOAD_SLOW_FETCH_TIMEOUT; }
     bool SetBlockDownloadMaxParallelFetch(int64_t max, std::string* err = nullptr) override { return true; }
     uint64_t GetBlockDownloadMaxParallelFetch() const override { return DEFAULT_MAX_BLOCK_PARALLEL_FETCH; }
+    bool SetAllowBlockDownloadFromClient(bool allow, std::string* err = nullptr) override { return true; }
+    bool GetAllowBlockDownloadFromClient() const override { return false; }
 
     // P2P parameters
     bool SetP2PHandshakeTimeout(int64_t timeout, std::string* err = nullptr) override { return true; }
@@ -1254,6 +1276,12 @@ public:
     std::string GetSafeModeWebhookAddress() const override { return ""; }
     int16_t GetSafeModeWebhookPort() const override { return rpc::client::WebhookClientDefaults::DEFAULT_WEBHOOK_PORT; }
     std::string GetSafeModeWebhookPath() const override { return ""; }
+    bool SetSafeModeMinBlockDifference(int64_t min, std::string* err = nullptr) override { return true; }
+    int64_t GetSafeModeMinBlockDifference() const override { return SAFE_MODE_DEFAULT_MIN_POW_DIFFERENCE; }
+    bool SetSafeModeMaxForkDistance(int64_t max, std::string* err = nullptr) override { return true; }
+    int64_t GetSafeModeMaxForkDistance() const override { return SAFE_MODE_DEFAULT_MAX_FORK_DISTANCE; }
+    bool SetSafeModeMinForkLength(int64_t min, std::string* err = nullptr) override { return true; }
+    int64_t GetSafeModeMinForkLength() const override { return SAFE_MODE_DEFAULT_MIN_FORK_LENGTH; }
 
     void Reset() override;
 

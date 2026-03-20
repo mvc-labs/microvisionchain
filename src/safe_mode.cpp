@@ -6,6 +6,7 @@
 #include "rpc/http_request.h"
 #include "rpc/http_response.h"
 #include "rpc/webhook_client.h"
+#include <cstdlib>
 
 SafeMode safeMode;
 
@@ -52,11 +53,15 @@ SafeModeLevel SafeMode::ShouldForkTriggerSafeMode(const Config& config, const CB
         return SafeModeLevel::NONE;
     }
 
+    const int64_t minForkLength = config.GetSafeModeMinForkLength();
+    const int64_t maxForkDistance = config.GetSafeModeMaxForkDistance();
+    const int64_t minPowDifference = config.GetSafeModeMinBlockDifference();
+
     // check if the fork is long enough
     assert(pindexForkTip->GetHeight() >= pindexForkBase->GetHeight());
     int64_t forkLength = pindexForkTip->GetHeight() - pindexForkBase->GetHeight() + 1;
 
-    if (forkLength < SAFE_MODE_DEFAULT_MIN_FORK_LENGTH)
+    if (forkLength < minForkLength)
     {
         return SafeModeLevel::NONE; // not long enough
     }
@@ -65,15 +70,15 @@ SafeModeLevel SafeMode::ShouldForkTriggerSafeMode(const Config& config, const CB
     assert(chainActive.Tip()->GetHeight() >= (pindexForkBase->GetHeight() - 1));
     int64_t forkBaseDistance = chainActive.Tip()->GetHeight() - (pindexForkBase->GetHeight() - 1);
 
-    if (forkBaseDistance > SAFE_MODE_DEFAULT_MAX_FORK_DISTANCE)
+    if (forkBaseDistance > maxForkDistance)
     {
         return SafeModeLevel::NONE; // not close enough
     }
     
     // check if the fork has enough proof-of-work
-    auto absPowDifference = GetBlockProof(*chainActive.Tip()) * abs(SAFE_MODE_DEFAULT_MIN_POW_DIFFERENCE);
+    auto absPowDifference = GetBlockProof(*chainActive.Tip()) * std::abs(minPowDifference);
     auto tipTotalWork = chainActive.Tip()->GetChainWork();
-    auto forkMinPow = SAFE_MODE_DEFAULT_MIN_POW_DIFFERENCE > 0
+    auto forkMinPow = minPowDifference > 0
         ? tipTotalWork + absPowDifference
         : tipTotalWork - std::min(static_cast<base_uint<256>>(tipTotalWork), absPowDifference);
 
@@ -101,11 +106,12 @@ int64_t SafeMode::GetMinimumRelevantBlockHeight(const Config& config) const
 {
     AssertLockHeld(cs_main);
     auto tipHeight = chainActive.Tip() ? chainActive.Tip()->GetHeight() : 0;
-    if(tipHeight < SAFE_MODE_DEFAULT_MAX_FORK_DISTANCE)
+    const int64_t maxForkDistance = config.GetSafeModeMaxForkDistance();
+    if(tipHeight < maxForkDistance)
     {
         return 0;
     }
-    return tipHeight - SAFE_MODE_DEFAULT_MAX_FORK_DISTANCE;
+    return tipHeight - maxForkDistance;
 }
 
 void SafeMode::CreateForkData(const Config& config, const CBlockIndex* pindexNew)

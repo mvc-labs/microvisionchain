@@ -98,7 +98,14 @@ bool IsBlockDownloadStallingFromPeer(const Config& config, const CNodePtr& node,
     return (avgbw < config.GetBlockStallingMinDownloadSpeed() * 1000);
 }
 
-void UpdatePreferredDownload(const CNodePtr& pnode) {
+bool CanRequestBlocksFromPeer(const Config& config, const CNodePtr& pnode)
+{
+    return !pnode->fClient ||
+        (config.GetAllowBlockDownloadFromClient() &&
+         (pnode->fAddnode || pnode->fWhitelisted));
+}
+
+void UpdatePreferredDownload(const Config& config, const CNodePtr& pnode) {
     // Try to obtain an access to the node's state data.
     const CNodeStateRef stateRef { GetState(pnode->GetId()) };
     const CNodeStatePtr& state { stateRef.get() };
@@ -109,7 +116,7 @@ void UpdatePreferredDownload(const CNodePtr& pnode) {
     // Whether this node should be marked as a preferred download node.
     state->fPreferredDownload = (!pnode->fInbound || pnode->fWhitelisted) &&
                                        !pnode->fOneShot &&
-                                       !pnode->fClient;
+                                       CanRequestBlocksFromPeer(config, pnode);
     nPreferredDownload += state->fPreferredDownload;
 }
 
@@ -1764,7 +1771,7 @@ static bool ProcessVersionMessage(const CNodePtr& pfrom, const std::string& strC
     }
 
     // Potentially mark this peer as a preferred download peer.
-    UpdatePreferredDownload(pfrom);
+    UpdatePreferredDownload(config, pfrom);
 
     CAddress peerAddr { pfrom->GetAssociation().GetPeerAddr() };
 
@@ -4070,18 +4077,19 @@ void SendAddrs(const CNodePtr& pto, CConnman &connman, const CNetMsgMaker& msgMa
     }
 }
 
-void SendBlockSync(const CNodePtr& pto, CConnman &connman, const CNetMsgMaker& msgMaker,
+void SendBlockSync(const Config& config, const CNodePtr& pto, CConnman &connman, const CNetMsgMaker& msgMaker,
     const CNodeStatePtr& state)
 {
     // Start block sync
     const auto& bestHeader = mapBlockIndex.GetBestHeader();
     assert(state);
+    const bool canRequestBlocks { CanRequestBlocksFromPeer(config, pto) };
     // Download if this is a nice peer, or we have no nice peers and this one
     // might do.
     bool fFetch = state->fPreferredDownload ||
-                  (nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot);
+                  (nPreferredDownload == 0 && canRequestBlocks && !pto->fOneShot);
 
-    if (!state->fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
+    if (!state->fSyncStarted && canRequestBlocks && !fImporting && !fReindex) {
         // Only actively request headers from a single peer, unless we're close
         // to today.
         if ((nSyncStarted == 0 && fFetch) ||
@@ -4492,9 +4500,10 @@ void SendGetDataBlocks(const Config &config, const CNodePtr& pto, CConnman& conn
     // Message: getdata (blocks)
     //
     std::vector<CInv> vGetData {};
+    const bool canRequestBlocks { CanRequestBlocksFromPeer(config, pto) };
     bool fFetch = state->fPreferredDownload ||
-                  (nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot);
-    if (!pto->fClient && (fFetch || !IsInitialBlockDownload()) &&
+                  (nPreferredDownload == 0 && canRequestBlocks && !pto->fOneShot);
+    if (canRequestBlocks && (fFetch || !IsInitialBlockDownload()) &&
         state->nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
         std::vector<const CBlockIndex *> vToDownload;
         NodeId staller = -1;
@@ -4671,7 +4680,7 @@ bool SendMessages(const Config &config, const CNodePtr& pto, CConnman &connman,
     assert(state);
 
     // Synchronise blockchain
-    SendBlockSync(pto, connman, msgMaker, state);
+    SendBlockSync(config, pto, connman, msgMaker, state);
 
     // Resend wallet transactions that haven't gotten in a block yet
     // Except during reindex, importing and IBD, when old wallet transactions
@@ -4705,4 +4714,3 @@ bool SendMessages(const Config &config, const CNodePtr& pto, CConnman &connman,
 
     return true;
 }
-

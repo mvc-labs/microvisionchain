@@ -9,6 +9,7 @@
 
 #include <string>
 #include <optional>
+#include <cstdint>
 
 class CScript;
 class CWallet;
